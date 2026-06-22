@@ -9,8 +9,14 @@ interface ApiResponse<T> {
   data: T
 }
 
+/**
+ * 开发环境下使用相对路径（空 baseURL），请求会落到 Vite Dev Server 自身的 origin 上，
+ * 由 vite.config.ts 中的 server.proxy 转发给后端，避免浏览器直接跨域触发 CORS 限制。
+ * 生产环境没有 Dev Server 代理，直接请求 VITE_API_BASE_URL 指向的后端地址
+ * （需后端或反向代理自行配置好 CORS / 同源转发）。
+ */
 const instance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: import.meta.env.DEV ? '' : import.meta.env.VITE_API_BASE_URL,
   timeout: 10000
 })
 
