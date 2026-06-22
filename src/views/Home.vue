@@ -7,6 +7,7 @@
         <div class="user-meta">{{ user.department }}</div>
         <div class="user-meta">{{ user.phone }}</div>
       </div>
+      <button class="logout-btn" @click="handleLogout">退出登录</button>
     </section>
 
     <section class="quick-entries">
@@ -48,8 +49,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { getCurrentUser, getMyRepairList } from '@/api'
+import { getCurrentUser, getMyRepairList, logout } from '@/api'
 import type { RepairOrder, UserInfo } from '@/types'
+import { showToast } from '@/composables/useToast'
 import Icon from '@/components/Icon.vue'
 import RepairCard from '@/components/RepairCard.vue'
 
@@ -57,6 +59,13 @@ const router = useRouter()
 const user = ref<UserInfo | null>(null)
 const recentOrders = ref<RepairOrder[]>([])
 const loading = ref(true)
+
+async function handleLogout() {
+  if (!window.confirm('确认退出登录？')) return
+  await logout()
+  showToast('已退出登录')
+  router.replace('/mobile/login')
+}
 
 onMounted(async () => {
   const [u, list] = await Promise.all([getCurrentUser(), getMyRepairList()])
@@ -105,6 +114,21 @@ onMounted(async () => {
   font-size: 12px;
   opacity: 0.9;
   line-height: 1.5;
+}
+
+.user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.logout-btn {
+  flex-shrink: 0;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 12px;
 }
 
 .quick-entries {

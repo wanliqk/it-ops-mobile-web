@@ -13,6 +13,11 @@ export const mockUser: UserInfo = {
   phone: '13812345678'
 }
 
+/** 演示账号：手机号 13812345678，密码 123456 */
+export const mockAccounts: { phone: string; password: string; user: UserInfo }[] = [
+  { phone: '13812345678', password: '123456', user: mockUser }
+]
+
 export const mockAssets: AssetItem[] = [
   { id: 'a1', assetNo: 'PC-00231', name: '联想ThinkCentre台式机' },
   { id: 'a2', assetNo: 'PC-00198', name: '惠普EliteBook笔记本' },

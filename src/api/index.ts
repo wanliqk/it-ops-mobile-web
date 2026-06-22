@@ -1,6 +1,7 @@
-import type { FaqItem, RepairCreateForm, RepairOrder, RepairStatus, UserInfo } from '@/types'
+import type { FaqItem, LoginForm, LoginResult, RepairCreateForm, RepairOrder, RepairStatus, UserInfo } from '@/types'
 import { delay } from '@/utils/delay'
-import { cloneOrder, mockFaqList, mockOrders, mockUser, nextOrderNo } from './mockDb'
+import { clearAuth, getStoredUser, setAuth } from '@/utils/storage'
+import { cloneOrder, mockAccounts, mockFaqList, mockOrders, nextOrderNo } from './mockDb'
 
 /**
  * Mock API 层。
@@ -15,11 +16,35 @@ import { cloneOrder, mockFaqList, mockOrders, mockUser, nextOrderNo } from './mo
  *   }
  */
 
+/** 登录，演示账号：13812345678 / 123456 */
+export async function login(form: LoginForm): Promise<LoginResult> {
+  // TODO: 替换为 POST /api/auth/login
+  await delay(500)
+  const account = mockAccounts.find(a => a.phone === form.phone && a.password === form.password)
+  if (!account) {
+    throw new Error('手机号或密码错误')
+  }
+  const token = `mock-token-${Date.now()}`
+  setAuth(token, account.user)
+  return { token, user: account.user }
+}
+
+/** 退出登录 */
+export async function logout(): Promise<void> {
+  // TODO: 替换为 POST /api/auth/logout
+  await delay(200)
+  clearAuth()
+}
+
 /** 获取当前登录用户信息 */
 export async function getCurrentUser(): Promise<UserInfo> {
-  // TODO: 替换为 GET /api/user/current
+  // TODO: 替换为 GET /api/user/current（后端通过请求头中的 token 解析当前用户）
   await delay()
-  return { ...mockUser }
+  const user = getStoredUser()
+  if (!user) {
+    throw new Error('未登录')
+  }
+  return { ...user }
 }
 
 /** 获取我的报修工单列表，按提交时间倒序，可选按状态筛选 */

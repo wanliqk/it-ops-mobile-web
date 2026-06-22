@@ -1,10 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { getToken } from '@/utils/storage'
 
 declare module 'vue-router' {
   interface RouteMeta {
     title?: string
     showBack?: boolean
     showTabBar?: boolean
+    /** 公开页面，无需登录即可访问 */
+    public?: boolean
   }
 }
 
@@ -12,6 +15,12 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', redirect: '/mobile/home' },
+    {
+      path: '/mobile/login',
+      name: 'login',
+      component: () => import('@/views/Login.vue'),
+      meta: { title: '登录', showBack: false, showTabBar: false, public: true }
+    },
     {
       path: '/mobile/home',
       name: 'home',
@@ -43,6 +52,20 @@ const router = createRouter({
       meta: { title: '常见问题', showBack: false, showTabBar: true }
     }
   ]
+})
+
+router.beforeEach(to => {
+  const loggedIn = !!getToken()
+
+  if (!to.meta.public && !loggedIn) {
+    return { path: '/mobile/login', query: { redirect: to.fullPath } }
+  }
+
+  if (to.path === '/mobile/login' && loggedIn) {
+    return '/mobile/home'
+  }
+
+  return true
 })
 
 export default router

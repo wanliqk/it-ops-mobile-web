@@ -6,6 +6,17 @@ export interface UserInfo {
   phone: string
 }
 
+// ============ 登录 ============
+export interface LoginForm {
+  phone: string
+  password: string
+}
+
+export interface LoginResult {
+  token: string
+  user: UserInfo
+}
+
 // ============ 工单状态 ============
 export type RepairStatus = 'pending' | 'processing' | 'completed' | 'closed'
 
