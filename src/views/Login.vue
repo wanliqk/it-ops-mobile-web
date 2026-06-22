@@ -8,22 +8,26 @@
 
     <form class="login-form" @submit.prevent="handleSubmit">
       <div class="form-item">
-        <label class="required">手机号</label>
-        <input v-model="form.phone" type="tel" placeholder="请输入手机号" maxlength="11" />
-        <p v-if="errors.phone" class="error-text">{{ errors.phone }}</p>
+        <label class="required">用户名</label>
+        <input v-model="form.username" type="text" placeholder="请输入用户名" maxlength="30" autocomplete="username" />
+        <p v-if="errors.username" class="error-text">{{ errors.username }}</p>
       </div>
 
       <div class="form-item">
         <label class="required">密码</label>
-        <input v-model="form.password" type="password" placeholder="请输入密码" maxlength="20" />
+        <input
+          v-model="form.password"
+          type="password"
+          placeholder="请输入密码"
+          maxlength="20"
+          autocomplete="current-password"
+        />
         <p v-if="errors.password" class="error-text">{{ errors.password }}</p>
       </div>
 
       <button class="login-btn" type="submit" :disabled="submitting">
         {{ submitting ? '登录中...' : '登录' }}
       </button>
-
-      <p class="login-hint">演示账号：13812345678　密码：123456</p>
     </form>
   </div>
 </template>
@@ -31,29 +35,23 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { login } from '@/api'
+import { login } from '@/api/mobile/auth'
 import type { LoginForm } from '@/types'
 import { showToast } from '@/composables/useToast'
+import { setAuth } from '@/utils/storage'
 
 const router = useRouter()
 const route = useRoute()
 
-const form = reactive<LoginForm>({ phone: '', password: '' })
+const form = reactive<LoginForm>({ username: '', password: '' })
 const errors = reactive<Partial<Record<keyof LoginForm, string>>>({})
 const submitting = ref(false)
 
 function validate(): boolean {
   Object.keys(errors).forEach(key => delete errors[key as keyof LoginForm])
 
-  if (!form.phone.trim()) {
-    errors.phone = '请输入手机号'
-  } else if (!/^1[3-9]\d{9}$/.test(form.phone.trim())) {
-    errors.phone = '请输入正确的手机号格式'
-  }
-
-  if (!form.password) {
-    errors.password = '请输入密码'
-  }
+  if (!form.username.trim()) errors.username = '请输入用户名'
+  if (!form.password) errors.password = '请输入密码'
 
   return Object.keys(errors).length === 0
 }
@@ -62,12 +60,13 @@ async function handleSubmit() {
   if (!validate()) return
   submitting.value = true
   try {
-    await login(form)
+    const result = await login(form)
+    setAuth(result.access_token, result.user)
     showToast('登录成功')
     const redirect = (route.query.redirect as string) || '/mobile/home'
     router.replace(redirect)
   } catch (e) {
-    showToast(e instanceof Error ? e.message : '登录失败，请稍后重试')
+    // 错误提示已由 request 拦截器统一通过 Toast 展示
   } finally {
     submitting.value = false
   }
@@ -164,12 +163,5 @@ async function handleSubmit() {
 
 .login-btn:disabled {
   opacity: 0.6;
-}
-
-.login-hint {
-  text-align: center;
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  padding-bottom: 16px;
 }
 </style>

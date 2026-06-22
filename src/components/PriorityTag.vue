@@ -1,12 +1,12 @@
 <template>
-  <span class="priority-tag" :class="priority">{{ RepairPriorityLabel[priority] }}</span>
+  <span class="priority-tag" :class="priority">{{ priorityMap[priority as TicketPriority] ?? priority }}</span>
 </template>
 
 <script setup lang="ts">
-import type { RepairPriority } from '@/types'
-import { RepairPriorityLabel } from '@/types'
+import type { TicketPriority } from '@/types'
+import { priorityMap } from '@/types'
 
-defineProps<{ priority: RepairPriority }>()
+defineProps<{ priority: string }>()
 </script>
 
 <style scoped>
@@ -21,17 +21,22 @@ defineProps<{ priority: RepairPriority }>()
   flex-shrink: 0;
 }
 
-.priority-tag.normal {
+.priority-tag.low {
   background: #f2f3f5;
   color: #86909c;
 }
 
-.priority-tag.urgent {
+.priority-tag.normal {
+  background: #e8f0fe;
+  color: #2468f2;
+}
+
+.priority-tag.high {
   background: #fff3e0;
   color: #ff9f40;
 }
 
-.priority-tag.critical {
+.priority-tag.urgent {
   background: #fde8e8;
   color: #f56c6c;
 }

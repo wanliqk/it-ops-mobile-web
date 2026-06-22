@@ -4,10 +4,37 @@
       <div class="avatar">{{ user.name.charAt(0) }}</div>
       <div class="user-info">
         <div class="user-name">{{ user.name }}</div>
-        <div class="user-meta">{{ user.department }}</div>
-        <div class="user-meta">{{ user.phone }}</div>
+        <div class="user-meta" v-if="user.department">{{ user.department }}</div>
+        <div class="user-meta" v-if="user.phone">{{ user.phone }}</div>
       </div>
       <button class="logout-btn" @click="handleLogout">退出登录</button>
+    </section>
+
+    <section class="summary-grid">
+      <div class="summary-item">
+        <span class="summary-num">{{ summary.total_count }}</span>
+        <span class="summary-label">全部</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-num">{{ summary.pending_count }}</span>
+        <span class="summary-label">待受理</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-num">{{ summary.assigned_count }}</span>
+        <span class="summary-label">已派单</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-num">{{ summary.processing_count }}</span>
+        <span class="summary-label">处理中</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-num">{{ summary.completed_count }}</span>
+        <span class="summary-label">已完成</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-num">{{ summary.cancelled_count }}</span>
+        <span class="summary-label">已取消</span>
+      </div>
     </section>
 
     <section class="quick-entries">
@@ -40,25 +67,35 @@
         </router-link>
       </div>
       <div v-if="loading" class="empty-tip">加载中...</div>
-      <div v-else-if="recentOrders.length === 0" class="empty-tip">暂无报修记录</div>
-      <RepairCard v-for="o in recentOrders" :key="o.id" :order="o" />
+      <div v-else-if="recentTickets.length === 0" class="empty-tip">暂无报修记录</div>
+      <RepairCard v-for="t in recentTickets" :key="t.id" :ticket="t" />
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { getCurrentUser, getMyRepairList, logout } from '@/api'
-import type { RepairOrder, UserInfo } from '@/types'
+import { getMe, logout } from '@/api/mobile/auth'
+import { getRecentTickets, getSummary } from '@/api/mobile/home'
+import type { HomeSummary, Ticket, UserInfo } from '@/types'
 import { showToast } from '@/composables/useToast'
+import { getStoredUser, setStoredUser } from '@/utils/storage'
 import Icon from '@/components/Icon.vue'
 import RepairCard from '@/components/RepairCard.vue'
 
 const router = useRouter()
-const user = ref<UserInfo | null>(null)
-const recentOrders = ref<RepairOrder[]>([])
+const user = ref<UserInfo | null>(getStoredUser())
+const recentTickets = ref<Ticket[]>([])
 const loading = ref(true)
+const summary = reactive<HomeSummary>({
+  total_count: 0,
+  pending_count: 0,
+  assigned_count: 0,
+  processing_count: 0,
+  completed_count: 0,
+  cancelled_count: 0
+})
 
 async function handleLogout() {
   if (!window.confirm('确认退出登录？')) return
@@ -68,10 +105,28 @@ async function handleLogout() {
 }
 
 onMounted(async () => {
-  const [u, list] = await Promise.all([getCurrentUser(), getMyRepairList()])
-  user.value = u
-  recentOrders.value = list.slice(0, 3)
-  loading.value = false
+  try {
+    const me = await getMe()
+    user.value = me
+    setStoredUser(me)
+  } catch {
+    // 401 已由 request 拦截器统一处理跳转登录页
+  }
+
+  try {
+    const [s, recent] = await Promise.all([getSummary(), getRecentTickets(5)])
+    Object.assign(summary, {
+      total_count: s.total_count ?? 0,
+      pending_count: s.pending_count ?? 0,
+      assigned_count: s.assigned_count ?? 0,
+      processing_count: s.processing_count ?? 0,
+      completed_count: s.completed_count ?? 0,
+      cancelled_count: s.cancelled_count ?? 0
+    })
+    recentTickets.value = recent
+  } finally {
+    loading.value = false
+  }
 })
 </script>
 
@@ -129,6 +184,44 @@ onMounted(async () => {
   background: rgba(255, 255, 255, 0.2);
   color: #fff;
   font-size: 12px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: #fff;
+  margin: 0 12px 12px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 0;
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.summary-item:nth-child(3n) {
+  border-right: none;
+}
+
+.summary-item:nth-last-child(-n + 3) {
+  border-bottom: none;
+}
+
+.summary-num {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.summary-label {
+  font-size: 12px;
+  color: var(--color-text-secondary);
 }
 
 .quick-entries {

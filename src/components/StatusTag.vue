@@ -1,12 +1,12 @@
 <template>
-  <span class="status-tag" :class="status">{{ RepairStatusLabel[status] }}</span>
+  <span class="status-tag" :class="status">{{ ticketStatusMap[status] }}</span>
 </template>
 
 <script setup lang="ts">
-import type { RepairStatus } from '@/types'
-import { RepairStatusLabel } from '@/types'
+import type { TicketStatus } from '@/types'
+import { ticketStatusMap } from '@/types'
 
-defineProps<{ status: RepairStatus }>()
+defineProps<{ status: TicketStatus }>()
 </script>
 
 <style scoped>
@@ -26,6 +26,11 @@ defineProps<{ status: RepairStatus }>()
   color: #ff9f40;
 }
 
+.status-tag.assigned {
+  background: #eef0fc;
+  color: #6a5cf5;
+}
+
 .status-tag.processing {
   background: #e8f0fe;
   color: #2468f2;
@@ -36,7 +41,7 @@ defineProps<{ status: RepairStatus }>()
   color: #2ba471;
 }
 
-.status-tag.closed {
+.status-tag.cancelled {
   background: #f2f3f5;
   color: #909399;
 }

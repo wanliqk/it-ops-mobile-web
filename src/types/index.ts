@@ -1,135 +1,178 @@
 // ============ 用户 ============
 export interface UserInfo {
-  id: string
+  id: number | string
+  username: string
   name: string
-  department: string
-  phone: string
+  department?: string
+  phone?: string
 }
 
 // ============ 登录 ============
 export interface LoginForm {
-  phone: string
+  username: string
   password: string
 }
 
 export interface LoginResult {
-  token: string
+  access_token: string
+  token_type: string
   user: UserInfo
 }
 
 // ============ 工单状态 ============
-export type RepairStatus = 'pending' | 'processing' | 'completed' | 'closed'
+export type TicketStatus = 'pending' | 'assigned' | 'processing' | 'completed' | 'cancelled'
 
-export const RepairStatusLabel: Record<RepairStatus, string> = {
+export const ticketStatusMap: Record<TicketStatus, string> = {
   pending: '待受理',
+  assigned: '已派单',
   processing: '处理中',
   completed: '已完成',
-  closed: '已关闭'
+  cancelled: '已取消'
 }
 
-export const RepairStatusOptions: { value: RepairStatus | 'all'; label: string }[] = [
+export const TicketStatusOptions: { value: TicketStatus | 'all'; label: string }[] = [
   { value: 'all', label: '全部' },
   { value: 'pending', label: '待受理' },
+  { value: 'assigned', label: '已派单' },
   { value: 'processing', label: '处理中' },
   { value: 'completed', label: '已完成' },
-  { value: 'closed', label: '已关闭' }
+  { value: 'cancelled', label: '已取消' }
 ]
 
-// ============ 紧急程度 ============
-export type RepairPriority = 'normal' | 'urgent' | 'critical'
+// ============ 优先级 ============
+export type TicketPriority = 'low' | 'normal' | 'high' | 'urgent'
 
-export const RepairPriorityLabel: Record<RepairPriority, string> = {
+export const priorityMap: Record<TicketPriority, string> = {
+  low: '低',
   normal: '普通',
-  urgent: '紧急',
-  critical: '非常紧急'
+  high: '高',
+  urgent: '紧急'
 }
 
-export const RepairPriorityOptions: { value: RepairPriority; label: string }[] = [
-  { value: 'normal', label: '普通' },
-  { value: 'urgent', label: '紧急' },
-  { value: 'critical', label: '非常紧急' }
-]
-
 // ============ 故障类型 ============
-export type RepairCategory =
-  | 'computer'
-  | 'printer'
-  | 'network'
-  | 'account'
-  | 'software'
-  | 'other'
+export type FaultType = 'hardware' | 'software' | 'network' | 'printer' | 'other'
 
-export const RepairCategoryLabel: Record<RepairCategory, string> = {
-  computer: '电脑故障',
-  printer: '打印机故障',
+export const faultTypeMap: Record<FaultType, string> = {
+  hardware: '硬件故障',
+  software: '软件故障',
   network: '网络故障',
-  account: '系统账号问题',
-  software: '软件安装',
+  printer: '打印机故障',
   other: '其他问题'
 }
 
-export const RepairCategoryOptions: { value: RepairCategory; label: string }[] = [
-  { value: 'computer', label: '电脑故障' },
-  { value: 'printer', label: '打印机故障' },
-  { value: 'network', label: '网络故障' },
-  { value: 'account', label: '系统账号问题' },
-  { value: 'software', label: '软件安装' },
-  { value: 'other', label: '其他问题' }
-]
+// ============ 字典选项（来自后端 form-options 接口） ============
+export interface DictOption {
+  value: string
+  label: string
+}
+
+export interface TicketFormOptions {
+  fault_types: DictOption[]
+  priorities: DictOption[]
+}
+
+// ============ 关联人 / 资产简要信息 ============
+export interface BriefUser {
+  id: number | string
+  name: string
+  department?: string
+  phone?: string
+}
+
+export interface BriefAsset {
+  id: number | string
+  asset_no: string
+  name: string
+}
+
+export interface AssetOption {
+  id: number | string
+  asset_no: string
+  name: string
+}
+
+// ============ 工单流转记录 ============
+export interface TicketRecord {
+  id: number | string
+  action: string
+  content?: string
+  operator?: string
+  created_at: string
+}
 
 // ============ 工单 ============
-export interface RepairOrder {
-  id: string
-  orderNo: string
-  reporterName: string
-  department: string
-  phone: string
-  category: RepairCategory
-  /** 故障设备：资产编号 / 设备名称，可选 */
-  device?: string
-  location: string
-  priority: RepairPriority
+export interface Ticket {
+  id: number | string
+  ticket_no: string
+  title: string
   description: string
-  /** 故障截图，占位实现为本地预览地址 */
-  images: string[]
-  status: RepairStatus
-  /** 提交时间 ISO 字符串 */
-  createdAt: string
-  /** 受理时间，未受理为空 */
-  acceptedAt?: string
-  /** 开始处理时间 */
-  processingAt?: string
-  /** 完成时间 */
-  completedAt?: string
-  /** 是否为用户主动撤销 */
-  cancelled?: boolean
-  handler?: string
-  result?: string
+  fault_type: string
+  priority: string
+  status: TicketStatus
+  reporter?: BriefUser | null
+  assignee?: BriefUser | null
+  asset?: BriefAsset | null
+  result?: string | null
+  created_at: string
+  assigned_at?: string | null
+  processing_at?: string | null
+  completed_at?: string | null
+  records?: TicketRecord[]
 }
 
 // ============ 发起报修表单 ============
-export interface RepairCreateForm {
-  reporterName: string
-  department: string
-  phone: string
-  category: RepairCategory | ''
-  device?: string
-  location: string
-  priority: RepairPriority
+export interface TicketCreateForm {
+  title: string
   description: string
-  images: string[]
+  fault_type: string
+  priority: string
+  asset_id?: number | string | null
+}
+
+// ============ 分页 ============
+export interface PageResult<T> {
+  list: T[]
+  total: number
+  page: number
+  page_size: number
+}
+
+export interface TicketListQuery {
+  page?: number
+  page_size?: number
+  status?: TicketStatus | 'all'
+  keyword?: string
+}
+
+// ============ 首页统计 ============
+export interface HomeSummary {
+  total_count: number
+  pending_count: number
+  assigned_count: number
+  processing_count: number
+  completed_count: number
+  cancelled_count: number
 }
 
 // ============ 常见问题 ============
-export interface FaqItem {
-  id: string
-  question: string
-  answer: string
+export interface FaqCategory {
+  value: string
+  label: string
 }
 
-// ============ 可选资产（用于"选择已有资产"占位列表） ============
-export interface AssetItem {
-  id: string
-  assetNo: string
-  name: string
+export interface FaqItem {
+  id: number | string
+  title: string
+  summary?: string
+  category: string
+  view_count?: number
+  created_at: string
+  content?: string
+}
+
+export interface FaqListQuery {
+  category?: string
+  keyword?: string
+  page?: number
+  page_size?: number
 }

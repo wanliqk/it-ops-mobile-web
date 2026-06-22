@@ -2,53 +2,27 @@
   <div class="create-page">
     <form class="form" @submit.prevent="handleSubmit">
       <div class="form-item">
-        <label class="required">报修人姓名</label>
-        <input v-model="form.reporterName" type="text" placeholder="请输入您的姓名" maxlength="20" />
-        <p v-if="errors.reporterName" class="error-text">{{ errors.reporterName }}</p>
-      </div>
-
-      <div class="form-item">
-        <label class="required">所属部门</label>
-        <input v-model="form.department" type="text" placeholder="请输入所属部门" maxlength="30" />
-        <p v-if="errors.department" class="error-text">{{ errors.department }}</p>
-      </div>
-
-      <div class="form-item">
-        <label class="required">联系电话</label>
-        <input v-model="form.phone" type="tel" placeholder="请输入手机号" maxlength="11" />
-        <p v-if="errors.phone" class="error-text">{{ errors.phone }}</p>
+        <label class="required">工单标题</label>
+        <input v-model="form.title" type="text" placeholder="请简要描述故障，例如：电脑无法开机" maxlength="50" />
+        <p v-if="errors.title" class="error-text">{{ errors.title }}</p>
       </div>
 
       <div class="form-item">
         <label class="required">故障类型</label>
-        <select v-model="form.category">
+        <select v-model="form.fault_type">
           <option value="" disabled>请选择故障类型</option>
-          <option v-for="opt in RepairCategoryOptions" :key="opt.value" :value="opt.value">
+          <option v-for="opt in formOptions.fault_types" :key="opt.value" :value="opt.value">
             {{ opt.label }}
           </option>
         </select>
-        <p v-if="errors.category" class="error-text">{{ errors.category }}</p>
-      </div>
-
-      <div class="form-item">
-        <label>故障设备</label>
-        <div class="device-row">
-          <input v-model="form.device" type="text" placeholder="资产编号 / 设备名称（选填）" maxlength="50" />
-          <button type="button" class="pick-btn" @click="showAssetPicker = true">选择资产</button>
-        </div>
-      </div>
-
-      <div class="form-item">
-        <label class="required">故障位置</label>
-        <input v-model="form.location" type="text" placeholder="例如：3楼研发部 / 1号门店收银台" maxlength="50" />
-        <p v-if="errors.location" class="error-text">{{ errors.location }}</p>
+        <p v-if="errors.fault_type" class="error-text">{{ errors.fault_type }}</p>
       </div>
 
       <div class="form-item">
         <label class="required">紧急程度</label>
         <div class="priority-group">
           <button
-            v-for="opt in RepairPriorityOptions"
+            v-for="opt in formOptions.priorities"
             :key="opt.value"
             type="button"
             class="priority-btn"
@@ -58,6 +32,16 @@
             {{ opt.label }}
           </button>
         </div>
+        <p v-if="errors.priority" class="error-text">{{ errors.priority }}</p>
+      </div>
+
+      <div class="form-item">
+        <label>关联资产</label>
+        <div class="device-row">
+          <input :value="selectedAssetLabel" type="text" placeholder="选填，可搜索资产编号 / 设备名称" readonly @click="openAssetPicker" />
+          <button v-if="form.asset_id" type="button" class="pick-btn" @click="clearAsset">清除</button>
+          <button v-else type="button" class="pick-btn" @click="openAssetPicker">选择资产</button>
+        </div>
       </div>
 
       <div class="form-item">
@@ -65,7 +49,7 @@
         <textarea
           v-model="form.description"
           rows="4"
-          placeholder="请详细描述故障现象，至少10个字"
+          placeholder="请详细描述故障现象"
           maxlength="300"
         ></textarea>
         <p v-if="errors.description" class="error-text">{{ errors.description }}</p>
@@ -74,19 +58,19 @@
       <div class="form-item">
         <label>故障截图</label>
         <div class="image-list">
-          <div v-for="(img, idx) in form.images" :key="idx" class="image-item">
+          <div v-for="(img, idx) in images" :key="idx" class="image-item">
             <img :src="img" alt="故障截图" />
             <button type="button" class="image-remove" @click="removeImage(idx)">
               <Icon name="close" />
             </button>
           </div>
-          <label v-if="form.images.length < 6" class="image-upload">
+          <label v-if="images.length < 6" class="image-upload">
             <Icon name="camera" />
             <span>上传图片</span>
             <input type="file" accept="image/*" multiple class="file-input" @change="onFileChange" />
           </label>
         </div>
-        <p class="hint-text">最多上传6张图片，用于帮助IT人员快速定位问题（占位实现，暂不上传至服务器）</p>
+        <p class="hint-text">最多上传6张图片，用于帮助IT人员快速定位问题（占位实现，暂未接入图片上传接口）</p>
       </div>
     </form>
 
@@ -96,12 +80,21 @@
       </button>
     </div>
 
-    <!-- 选择已有资产 弹层（占位实现） -->
+    <!-- 选择关联资产 弹层 -->
     <div v-if="showAssetPicker" class="asset-overlay" @click.self="showAssetPicker = false">
       <div class="asset-sheet">
-        <div class="asset-sheet-title">选择已有资产</div>
-        <div class="asset-item" v-for="asset in mockAssets" :key="asset.id" @click="selectAsset(asset)">
-          <div class="asset-no">{{ asset.assetNo }}</div>
+        <div class="asset-sheet-title">选择关联资产</div>
+        <input
+          v-model="assetKeyword"
+          class="asset-search"
+          type="text"
+          placeholder="搜索资产编号 / 设备名称"
+          @input="onAssetKeywordChange"
+        />
+        <div v-if="assetLoading" class="empty-tip">搜索中...</div>
+        <div v-else-if="assetOptions.length === 0" class="empty-tip">未找到相关资产</div>
+        <div class="asset-item" v-for="asset in assetOptions" :key="asset.id" @click="selectAsset(asset)">
+          <div class="asset-no">{{ asset.asset_no }}</div>
           <div class="asset-name">{{ asset.name }}</div>
         </div>
         <button type="button" class="asset-cancel" @click="showAssetPicker = false">取消</button>
@@ -111,53 +104,59 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { createRepairOrder } from '@/api'
-import { mockAssets } from '@/api/mockDb'
-import type { AssetItem, RepairCreateForm } from '@/types'
-import { RepairCategoryOptions, RepairPriorityOptions } from '@/types'
+import { getAssetOptions } from '@/api/mobile/asset'
+import { createTicket, getFormOptions } from '@/api/mobile/ticket'
+import type { AssetOption, TicketCreateForm, TicketFormOptions } from '@/types'
 import { showToast } from '@/composables/useToast'
 import Icon from '@/components/Icon.vue'
 
 const router = useRouter()
 
-const form = reactive<RepairCreateForm>({
-  reporterName: '',
-  department: '',
-  phone: '',
-  category: '',
-  device: '',
-  location: '',
-  priority: 'normal',
+const form = reactive<TicketCreateForm>({
+  title: '',
   description: '',
-  images: []
+  fault_type: '',
+  priority: '',
+  asset_id: null
 })
 
-const errors = reactive<Partial<Record<keyof RepairCreateForm, string>>>({})
+const formOptions = reactive<TicketFormOptions>({ fault_types: [], priorities: [] })
+const errors = reactive<Partial<Record<keyof TicketCreateForm, string>>>({})
 const submitting = ref(false)
+
+// 故障截图仅为占位实现，后端暂未提供图片上传接口，不随表单提交
+const images = ref<string[]>([])
+
 const showAssetPicker = ref(false)
+const assetKeyword = ref('')
+const assetOptions = ref<AssetOption[]>([])
+const assetLoading = ref(false)
+const selectedAsset = ref<AssetOption | null>(null)
+let assetSearchTimer: ReturnType<typeof setTimeout> | null = null
+
+const selectedAssetLabel = computed(() =>
+  selectedAsset.value ? `${selectedAsset.value.asset_no} ${selectedAsset.value.name}` : ''
+)
+
+onMounted(async () => {
+  try {
+    const opts = await getFormOptions()
+    formOptions.fault_types = opts.fault_types ?? []
+    formOptions.priorities = opts.priorities ?? []
+  } catch {
+    // 错误提示已由 request 拦截器统一展示
+  }
+})
 
 function validate(): boolean {
-  Object.keys(errors).forEach(key => delete errors[key as keyof RepairCreateForm])
+  Object.keys(errors).forEach(key => delete errors[key as keyof TicketCreateForm])
 
-  if (!form.reporterName.trim()) errors.reporterName = '请输入报修人姓名'
-  if (!form.department.trim()) errors.department = '请输入所属部门'
-
-  if (!form.phone.trim()) {
-    errors.phone = '请输入联系电话'
-  } else if (!/^1[3-9]\d{9}$/.test(form.phone.trim())) {
-    errors.phone = '请输入正确的手机号格式'
-  }
-
-  if (!form.category) errors.category = '请选择故障类型'
-  if (!form.location.trim()) errors.location = '请输入故障位置'
-
-  if (!form.description.trim()) {
-    errors.description = '请输入故障描述'
-  } else if (form.description.trim().length < 10) {
-    errors.description = '故障描述至少10个字'
-  }
+  if (!form.title.trim()) errors.title = '请输入工单标题'
+  if (!form.fault_type) errors.fault_type = '请选择故障类型'
+  if (!form.priority) errors.priority = '请选择紧急程度'
+  if (!form.description.trim()) errors.description = '请输入故障描述'
 
   return Object.keys(errors).length === 0
 }
@@ -166,35 +165,70 @@ async function handleSubmit() {
   if (!validate()) return
   submitting.value = true
   try {
-    const order = await createRepairOrder(form)
-    showToast(`提交成功，工单编号：${order.orderNo}`)
+    const ticket = await createTicket({
+      title: form.title.trim(),
+      description: form.description.trim(),
+      fault_type: form.fault_type,
+      priority: form.priority,
+      asset_id: form.asset_id || undefined
+    })
+    showToast('报修提交成功')
     setTimeout(() => {
-      router.replace('/mobile/repair/list')
+      router.replace(`/mobile/repair/detail/${ticket.id}`)
     }, 900)
-  } catch (e) {
-    showToast('提交失败，请稍后重试')
+  } catch {
+    // 错误提示已由 request 拦截器统一展示
   } finally {
     submitting.value = false
   }
 }
 
-function selectAsset(asset: AssetItem) {
-  form.device = `${asset.assetNo} ${asset.name}`
+function openAssetPicker() {
+  showAssetPicker.value = true
+  if (assetOptions.value.length === 0) {
+    searchAssets()
+  }
+}
+
+function onAssetKeywordChange() {
+  if (assetSearchTimer) clearTimeout(assetSearchTimer)
+  assetSearchTimer = setTimeout(searchAssets, 300)
+}
+
+async function searchAssets() {
+  assetLoading.value = true
+  try {
+    assetOptions.value = await getAssetOptions(assetKeyword.value.trim() || undefined)
+  } catch {
+    assetOptions.value = []
+  } finally {
+    assetLoading.value = false
+  }
+}
+
+function selectAsset(asset: AssetOption) {
+  selectedAsset.value = asset
+  form.asset_id = asset.id
   showAssetPicker.value = false
+}
+
+function clearAsset() {
+  selectedAsset.value = null
+  form.asset_id = null
 }
 
 function onFileChange(e: Event) {
   const input = e.target as HTMLInputElement
   const files = input.files
   if (!files) return
-  const remain = 6 - form.images.length
+  const remain = 6 - images.value.length
   Array.from(files)
     .slice(0, remain)
     .forEach(file => {
       const reader = new FileReader()
       reader.onload = () => {
         if (typeof reader.result === 'string') {
-          form.images.push(reader.result)
+          images.value.push(reader.result)
         }
       }
       reader.readAsDataURL(file)
@@ -203,7 +237,7 @@ function onFileChange(e: Event) {
 }
 
 function removeImage(idx: number) {
-  form.images.splice(idx, 1)
+  images.value.splice(idx, 1)
 }
 </script>
 
@@ -236,7 +270,6 @@ function removeImage(idx: number) {
 }
 
 .form-item input[type='text'],
-.form-item input[type='tel'],
 .form-item select {
   width: 100%;
   height: 40px;
@@ -292,19 +325,25 @@ function removeImage(idx: number) {
   color: var(--color-text-secondary);
 }
 
-.priority-btn.active.normal {
+.priority-btn.active.low {
   background: #f2f3f5;
   color: var(--color-info);
   border-color: var(--color-info);
 }
 
-.priority-btn.active.urgent {
+.priority-btn.active.normal {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.priority-btn.active.high {
   background: #fff3e0;
   color: var(--color-warning);
   border-color: var(--color-warning);
 }
 
-.priority-btn.active.critical {
+.priority-btn.active.urgent {
   background: #fde8e8;
   color: var(--color-danger);
   border-color: var(--color-danger);
@@ -420,7 +459,7 @@ function removeImage(idx: number) {
 
 .asset-sheet {
   width: 100%;
-  max-height: 60vh;
+  max-height: 70vh;
   overflow-y: auto;
   background: #fff;
   border-radius: 12px 12px 0 0;
@@ -432,6 +471,17 @@ function removeImage(idx: number) {
   font-weight: 600;
   margin-bottom: 12px;
   text-align: center;
+}
+
+.asset-search {
+  width: 100%;
+  height: 38px;
+  padding: 0 10px;
+  margin-bottom: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 14px;
+  background: #fafafa;
 }
 
 .asset-item {

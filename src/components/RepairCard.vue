@@ -1,30 +1,29 @@
 <template>
   <div class="repair-card" @click="goDetail">
     <div class="card-top">
-      <span class="order-no">{{ order.orderNo }}</span>
-      <StatusTag :status="order.status" />
+      <span class="order-no">{{ ticket.ticket_no }}</span>
+      <StatusTag :status="ticket.status" />
     </div>
-    <div class="card-category">{{ RepairCategoryLabel[order.category] }}</div>
-    <div class="card-desc">{{ order.description }}</div>
+    <div class="card-category">{{ ticket.title }}</div>
+    <div class="card-desc">{{ ticket.description }}</div>
     <div class="card-bottom">
-      <span class="card-time">{{ formatTime(order.createdAt) }}</span>
-      <span v-if="order.handler" class="card-handler">处理人：{{ order.handler }}</span>
+      <span class="card-time">{{ formatTime(ticket.created_at) }}</span>
+      <span v-if="ticket.assignee" class="card-handler">处理人：{{ ticket.assignee.name }}</span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import type { RepairOrder } from '@/types'
-import { RepairCategoryLabel } from '@/types'
+import type { Ticket } from '@/types'
 import { formatTime } from '@/utils/timeline'
 import StatusTag from './StatusTag.vue'
 
-const props = defineProps<{ order: RepairOrder }>()
+const props = defineProps<{ ticket: Ticket }>()
 const router = useRouter()
 
 function goDetail() {
-  router.push(`/mobile/repair/detail/${props.order.id}`)
+  router.push(`/mobile/repair/detail/${props.ticket.id}`)
 }
 </script>
 
