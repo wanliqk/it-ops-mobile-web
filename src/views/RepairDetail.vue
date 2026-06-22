@@ -23,7 +23,7 @@
         </div>
         <div class="info-row">
           <span class="info-label">报修人</span>
-          <span class="info-value">{{ ticket.reporter?.name ?? '暂无' }}</span>
+          <span class="info-value">{{ ticket.reporter?.real_name ?? '暂无' }}</span>
         </div>
         <div class="info-row" v-if="ticket.reporter?.department">
           <span class="info-label">部门</span>
@@ -35,12 +35,12 @@
         </div>
         <div class="info-row">
           <span class="info-label">处理人</span>
-          <span class="info-value">{{ ticket.assignee?.name ?? '未分配' }}</span>
+          <span class="info-value">{{ ticket.handler?.real_name ?? '未分配' }}</span>
         </div>
         <div class="info-row">
           <span class="info-label">关联资产</span>
           <span class="info-value">
-            {{ ticket.asset ? `${ticket.asset.asset_no} ${ticket.asset.name}` : '未关联资产' }}
+            {{ ticket.asset ? `${ticket.asset.asset_no} ${ticket.asset.asset_name}` : '未关联资产' }}
           </span>
         </div>
         <div class="info-row">
@@ -53,7 +53,7 @@
         </div>
         <div class="info-row">
           <span class="info-label">开始处理时间</span>
-          <span class="info-value">{{ ticket.processing_at ? formatTime(ticket.processing_at) : '未处理' }}</span>
+          <span class="info-value">{{ ticket.started_at ? formatTime(ticket.started_at) : '未处理' }}</span>
         </div>
         <div class="info-row">
           <span class="info-label">完成时间</span>
@@ -81,10 +81,10 @@
           >
             <span class="dot"></span>
             <div class="timeline-content">
-              <div class="timeline-label">{{ rec.action }}</div>
-              <div v-if="rec.content" class="timeline-desc">{{ rec.content }}</div>
+              <div class="timeline-label">{{ ticketRecordActionMap[rec.action] ?? rec.action }}</div>
+              <div v-if="rec.remark" class="timeline-desc">{{ rec.remark }}</div>
               <div class="timeline-time">
-                <span v-if="rec.operator">{{ rec.operator }} · </span>{{ formatTime(rec.created_at) }}
+                <span v-if="rec.operator">{{ rec.operator.real_name }} · </span>{{ formatTime(rec.created_at) }}
               </div>
             </div>
           </div>
@@ -102,7 +102,7 @@
     <div v-if="showCancelSheet" class="cancel-overlay" @click.self="showCancelSheet = false">
       <div class="cancel-sheet">
         <div class="cancel-title">撤销报修</div>
-        <textarea v-model="cancelReason" rows="3" placeholder="请输入撤销原因（选填）" maxlength="100"></textarea>
+        <textarea v-model="cancelReason" rows="3" placeholder="请输入撤销原因" maxlength="100"></textarea>
         <div class="cancel-actions">
           <button type="button" class="cancel-btn secondary" @click="showCancelSheet = false">取消</button>
           <button type="button" class="cancel-btn primary" :disabled="actionLoading" @click="handleCancel">
@@ -119,7 +119,7 @@ import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { cancelTicket, getTicketDetail } from '@/api/mobile/ticket'
 import type { FaultType, Ticket } from '@/types'
-import { faultTypeMap } from '@/types'
+import { faultTypeMap, ticketRecordActionMap } from '@/types'
 import { formatTime } from '@/utils/timeline'
 import { showToast } from '@/composables/useToast'
 import StatusTag from '@/components/StatusTag.vue'

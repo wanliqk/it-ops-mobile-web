@@ -1,11 +1,10 @@
 <template>
   <div class="home-page">
     <section class="user-card" v-if="user">
-      <div class="avatar">{{ user.name.charAt(0) }}</div>
+      <div class="avatar">{{ user.real_name.charAt(0) }}</div>
       <div class="user-info">
-        <div class="user-name">{{ user.name }}</div>
+        <div class="user-name">{{ user.real_name }}</div>
         <div class="user-meta" v-if="user.department">{{ user.department }}</div>
-        <div class="user-meta" v-if="user.phone">{{ user.phone }}</div>
       </div>
       <button class="logout-btn" @click="handleLogout">退出登录</button>
     </section>
@@ -78,7 +77,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getMe, logout } from '@/api/mobile/auth'
 import { getRecentTickets, getSummary } from '@/api/mobile/home'
-import type { HomeSummary, Ticket, UserInfo } from '@/types'
+import type { HomeSummary, TicketBrief, UserInfo } from '@/types'
 import { showToast } from '@/composables/useToast'
 import { getStoredUser, setStoredUser } from '@/utils/storage'
 import Icon from '@/components/Icon.vue'
@@ -86,7 +85,7 @@ import RepairCard from '@/components/RepairCard.vue'
 
 const router = useRouter()
 const user = ref<UserInfo | null>(getStoredUser())
-const recentTickets = ref<Ticket[]>([])
+const recentTickets = ref<TicketBrief[]>([])
 const loading = ref(true)
 const summary = reactive<HomeSummary>({
   total_count: 0,

@@ -31,7 +31,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { getTickets } from '@/api/mobile/ticket'
-import type { Ticket, TicketStatus } from '@/types'
+import type { TicketBrief, TicketStatus } from '@/types'
 import { TicketStatusOptions } from '@/types'
 import RepairCard from '@/components/RepairCard.vue'
 
@@ -39,7 +39,7 @@ const PAGE_SIZE = 10
 
 const activeFilter = ref<TicketStatus | 'all'>('all')
 const keyword = ref('')
-const tickets = ref<Ticket[]>([])
+const tickets = ref<TicketBrief[]>([])
 const total = ref(0)
 const page = ref(1)
 const loading = ref(true)
@@ -56,9 +56,9 @@ async function fetchPage(targetPage: number) {
   })
   total.value = result.total ?? 0
   if (targetPage === 1) {
-    tickets.value = result.list ?? []
+    tickets.value = result.items ?? []
   } else {
-    tickets.value.push(...(result.list ?? []))
+    tickets.value.push(...(result.items ?? []))
   }
   page.value = targetPage
 }

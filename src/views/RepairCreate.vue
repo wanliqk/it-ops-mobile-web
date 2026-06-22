@@ -95,7 +95,7 @@
         <div v-else-if="assetOptions.length === 0" class="empty-tip">未找到相关资产</div>
         <div class="asset-item" v-for="asset in assetOptions" :key="asset.id" @click="selectAsset(asset)">
           <div class="asset-no">{{ asset.asset_no }}</div>
-          <div class="asset-name">{{ asset.name }}</div>
+          <div class="asset-name">{{ asset.asset_name }}</div>
         </div>
         <button type="button" class="asset-cancel" @click="showAssetPicker = false">取消</button>
       </div>
@@ -137,7 +137,7 @@ const selectedAsset = ref<AssetOption | null>(null)
 let assetSearchTimer: ReturnType<typeof setTimeout> | null = null
 
 const selectedAssetLabel = computed(() =>
-  selectedAsset.value ? `${selectedAsset.value.asset_no} ${selectedAsset.value.name}` : ''
+  selectedAsset.value ? `${selectedAsset.value.asset_no} ${selectedAsset.value.asset_name}` : ''
 )
 
 onMounted(async () => {

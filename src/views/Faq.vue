@@ -91,9 +91,9 @@ async function fetchPage(targetPage: number) {
   })
   total.value = result.total ?? 0
   if (targetPage === 1) {
-    list.value = result.list ?? []
+    list.value = result.items ?? []
   } else {
-    list.value.push(...(result.list ?? []))
+    list.value.push(...(result.items ?? []))
   }
   page.value = targetPage
 }

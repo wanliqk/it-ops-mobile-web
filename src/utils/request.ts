@@ -10,6 +10,22 @@ interface ApiResponse<T> {
 }
 
 /**
+ * 提取错误提示文本。
+ * 后端业务错误走统一格式 { code, message, data }；
+ * 但 422 参数校验失败由 FastAPI 默认异常处理器返回，格式是 { detail: [{ loc, msg, type }] }，
+ * 需要单独兼容提取，否则会落到 error.message 这种不可读的英文提示上。
+ */
+function extractErrorMessage(error: any): string {
+  const data = error.response?.data
+  if (data?.message) return data.message
+  if (Array.isArray(data?.detail)) {
+    return data.detail.map((item: { msg?: string }) => item.msg).filter(Boolean).join('；') || '参数校验失败'
+  }
+  if (typeof data?.detail === 'string') return data.detail
+  return error.message || '网络异常，请稍后重试'
+}
+
+/**
  * 开发环境下使用相对路径（空 baseURL），请求会落到 Vite Dev Server 自身的 origin 上，
  * 由 vite.config.ts 中的 server.proxy 转发给后端，避免浏览器直接跨域触发 CORS 限制。
  * 生产环境没有 Dev Server 代理，直接请求 VITE_API_BASE_URL 指向的后端地址
@@ -45,7 +61,7 @@ instance.interceptors.response.use(
       router.replace({ path: '/mobile/login', query: { redirect: router.currentRoute.value.fullPath } })
       return Promise.reject(error)
     }
-    const message = error.response?.data?.message || error.message || '网络异常，请稍后重试'
+    const message = extractErrorMessage(error)
     showToast(message)
     return Promise.reject(new Error(message))
   }

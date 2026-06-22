@@ -4,22 +4,26 @@
       <span class="order-no">{{ ticket.ticket_no }}</span>
       <StatusTag :status="ticket.status" />
     </div>
-    <div class="card-category">{{ ticket.title }}</div>
-    <div class="card-desc">{{ ticket.description }}</div>
+    <div class="card-title">{{ ticket.title }}</div>
     <div class="card-bottom">
+      <span class="card-tags">
+        <span class="card-fault-type">{{ faultTypeMap[ticket.fault_type as FaultType] ?? ticket.fault_type }}</span>
+        <PriorityTag :priority="ticket.priority" />
+      </span>
       <span class="card-time">{{ formatTime(ticket.created_at) }}</span>
-      <span v-if="ticket.assignee" class="card-handler">处理人：{{ ticket.assignee.name }}</span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import type { Ticket } from '@/types'
+import type { FaultType, TicketBrief } from '@/types'
+import { faultTypeMap } from '@/types'
 import { formatTime } from '@/utils/timeline'
 import StatusTag from './StatusTag.vue'
+import PriorityTag from './PriorityTag.vue'
 
-const props = defineProps<{ ticket: Ticket }>()
+const props = defineProps<{ ticket: TicketBrief }>()
 const router = useRouter()
 
 function goDetail() {
@@ -51,27 +55,27 @@ function goDetail() {
   color: var(--color-text-secondary);
 }
 
-.card-category {
+.card-title {
   font-size: 15px;
   font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.card-desc {
-  font-size: 13px;
-  color: var(--color-text-secondary);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
   margin-bottom: 8px;
-  line-height: 1.5;
 }
 
 .card-bottom {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.card-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.card-fault-type {
   font-size: 12px;
   color: var(--color-text-secondary);
 }

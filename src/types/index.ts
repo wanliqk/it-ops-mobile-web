@@ -2,7 +2,8 @@
 export interface UserInfo {
   id: number | string
   username: string
-  name: string
+  real_name: string
+  role?: string
   department?: string
   phone?: string
 }
@@ -60,7 +61,16 @@ export const faultTypeMap: Record<FaultType, string> = {
   other: '其他问题'
 }
 
-// ============ 字典选项（来自后端 form-options 接口） ============
+// ============ 工单流转记录 action 展示映射 ============
+export const ticketRecordActionMap: Record<string, string> = {
+  create: '提交工单',
+  assign: '派单',
+  process: '开始处理',
+  complete: '完成处理',
+  cancel: '撤销工单'
+}
+
+// ============ 字典选项（来自后端 form-options / faqs/categories 接口） ============
 export interface DictOption {
   value: string
   label: string
@@ -71,36 +81,62 @@ export interface TicketFormOptions {
   priorities: DictOption[]
 }
 
-// ============ 关联人 / 资产简要信息 ============
+// ============ 关联人信息 ============
 export interface BriefUser {
   id: number | string
-  name: string
+  username: string
+  real_name: string
   department?: string
   phone?: string
 }
 
-export interface BriefAsset {
-  id: number | string
-  asset_no: string
-  name: string
-}
-
+// ============ 资产信息（发起报修页可选列表） ============
 export interface AssetOption {
   id: number | string
   asset_no: string
-  name: string
+  asset_name: string
+  brand?: string
+  model?: string
+  status?: string
+  location?: string
+}
+
+// ============ 资产信息（工单详情中关联资产） ============
+export interface TicketAsset {
+  id: number | string
+  asset_no: string
+  asset_name: string
+  brand?: string
+  model?: string
+  serial_no?: string
+  location?: string
+  status?: string
 }
 
 // ============ 工单流转记录 ============
 export interface TicketRecord {
   id: number | string
   action: string
-  content?: string
-  operator?: string
+  from_status?: TicketStatus | null
+  to_status?: TicketStatus | null
+  remark?: string | null
+  operator?: BriefUser | null
   created_at: string
 }
 
-// ============ 工单 ============
+// ============ 工单（列表 / 最近报修，字段较精简） ============
+export interface TicketBrief {
+  id: number | string
+  ticket_no: string
+  title: string
+  status: TicketStatus
+  created_at: string
+  fault_type: string
+  priority: string
+  asset_id?: number | string | null
+}
+
+// ============ 工单详情（字段完整） ============
 export interface Ticket {
   id: number | string
   ticket_no: string
@@ -109,15 +145,25 @@ export interface Ticket {
   fault_type: string
   priority: string
   status: TicketStatus
-  reporter?: BriefUser | null
-  assignee?: BriefUser | null
-  asset?: BriefAsset | null
   result?: string | null
+  reporter?: BriefUser | null
+  handler?: BriefUser | null
+  asset?: TicketAsset | null
+  records?: TicketRecord[]
   created_at: string
   assigned_at?: string | null
-  processing_at?: string | null
+  started_at?: string | null
   completed_at?: string | null
-  records?: TicketRecord[]
+  updated_at?: string
+}
+
+// ============ 创建 / 撤销工单的精简返回 ============
+export interface TicketActionResult {
+  id: number | string
+  ticket_no: string
+  title?: string
+  status: TicketStatus
+  created_at?: string
 }
 
 // ============ 发起报修表单 ============
@@ -131,7 +177,7 @@ export interface TicketCreateForm {
 
 // ============ 分页 ============
 export interface PageResult<T> {
-  list: T[]
+  items: T[]
   total: number
   page: number
   page_size: number
@@ -167,6 +213,7 @@ export interface FaqItem {
   category: string
   view_count?: number
   created_at: string
+  updated_at?: string
   content?: string
 }
 
