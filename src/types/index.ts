@@ -50,17 +50,6 @@ export const priorityMap: Record<TicketPriority, string> = {
   urgent: '紧急'
 }
 
-// ============ 故障类型 ============
-export type FaultType = 'hardware' | 'software' | 'network' | 'printer' | 'other'
-
-export const faultTypeMap: Record<FaultType, string> = {
-  hardware: '硬件故障',
-  software: '软件故障',
-  network: '网络故障',
-  printer: '打印机故障',
-  other: '其他问题'
-}
-
 // ============ 工单流转记录 action 展示映射 ============
 export const ticketRecordActionMap: Record<string, string> = {
   create: '提交工单',
@@ -77,7 +66,7 @@ export interface DictOption {
 }
 
 export interface TicketFormOptions {
-  fault_types: DictOption[]
+  categories: DictOption[]
   priorities: DictOption[]
 }
 
@@ -131,7 +120,7 @@ export interface TicketBrief {
   title: string
   status: TicketStatus
   created_at: string
-  fault_type: string
+  category_id: number | string
   priority: string
   asset_id?: number | string | null
 }
@@ -142,7 +131,7 @@ export interface Ticket {
   ticket_no: string
   title: string
   description: string
-  fault_type: string
+  category_id: number | string
   priority: string
   status: TicketStatus
   result?: string | null
@@ -170,7 +159,7 @@ export interface TicketActionResult {
 export interface TicketCreateForm {
   title: string
   description: string
-  fault_type: string
+  category_id: number | string
   priority: string
   asset_id?: number | string | null
 }

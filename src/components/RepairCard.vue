@@ -7,7 +7,7 @@
     <div class="card-title">{{ ticket.title }}</div>
     <div class="card-bottom">
       <span class="card-tags">
-        <span class="card-fault-type">{{ faultTypeMap[ticket.fault_type as FaultType] ?? ticket.fault_type }}</span>
+        <span class="card-category">{{ categoryLabel(ticket.category_id) }}</span>
         <PriorityTag :priority="ticket.priority" />
       </span>
       <span class="card-time">{{ formatTime(ticket.created_at) }}</span>
@@ -16,15 +16,19 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import type { FaultType, TicketBrief } from '@/types'
-import { faultTypeMap } from '@/types'
+import type { TicketBrief } from '@/types'
 import { formatTime } from '@/utils/timeline'
+import { useTicketCategories } from '@/composables/useTicketCategories'
 import StatusTag from './StatusTag.vue'
 import PriorityTag from './PriorityTag.vue'
 
 const props = defineProps<{ ticket: TicketBrief }>()
 const router = useRouter()
+const { ensureLoaded, categoryLabel } = useTicketCategories()
+
+onMounted(ensureLoaded)
 
 function goDetail() {
   router.push(`/mobile/repair/detail/${props.ticket.id}`)
@@ -75,7 +79,7 @@ function goDetail() {
   gap: 6px;
 }
 
-.card-fault-type {
+.card-category {
   font-size: 12px;
   color: var(--color-text-secondary);
 }

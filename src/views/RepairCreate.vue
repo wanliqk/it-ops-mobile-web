@@ -8,14 +8,14 @@
       </div>
 
       <div class="form-item">
-        <label class="required">故障类型</label>
-        <select v-model="form.fault_type">
-          <option value="" disabled>请选择故障类型</option>
-          <option v-for="opt in formOptions.fault_types" :key="opt.value" :value="opt.value">
+        <label class="required">工单分类</label>
+        <select v-model="form.category_id">
+          <option value="" disabled>请选择工单分类</option>
+          <option v-for="opt in formOptions.categories" :key="opt.value" :value="opt.value">
             {{ opt.label }}
           </option>
         </select>
-        <p v-if="errors.fault_type" class="error-text">{{ errors.fault_type }}</p>
+        <p v-if="errors.category_id" class="error-text">{{ errors.category_id }}</p>
       </div>
 
       <div class="form-item">
@@ -117,12 +117,12 @@ const router = useRouter()
 const form = reactive<TicketCreateForm>({
   title: '',
   description: '',
-  fault_type: '',
+  category_id: '',
   priority: '',
   asset_id: null
 })
 
-const formOptions = reactive<TicketFormOptions>({ fault_types: [], priorities: [] })
+const formOptions = reactive<TicketFormOptions>({ categories: [], priorities: [] })
 const errors = reactive<Partial<Record<keyof TicketCreateForm, string>>>({})
 const submitting = ref(false)
 
@@ -143,7 +143,7 @@ const selectedAssetLabel = computed(() =>
 onMounted(async () => {
   try {
     const opts = await getFormOptions()
-    formOptions.fault_types = opts.fault_types ?? []
+    formOptions.categories = opts.categories ?? []
     formOptions.priorities = opts.priorities ?? []
   } catch {
     // 错误提示已由 request 拦截器统一展示
@@ -154,7 +154,7 @@ function validate(): boolean {
   Object.keys(errors).forEach(key => delete errors[key as keyof TicketCreateForm])
 
   if (!form.title.trim()) errors.title = '请输入工单标题'
-  if (!form.fault_type) errors.fault_type = '请选择故障类型'
+  if (!form.category_id) errors.category_id = '请选择工单分类'
   if (!form.priority) errors.priority = '请选择紧急程度'
   if (!form.description.trim()) errors.description = '请输入故障描述'
 
@@ -168,7 +168,7 @@ async function handleSubmit() {
     const ticket = await createTicket({
       title: form.title.trim(),
       description: form.description.trim(),
-      fault_type: form.fault_type,
+      category_id: form.category_id,
       priority: form.priority,
       asset_id: form.asset_id || undefined
     })

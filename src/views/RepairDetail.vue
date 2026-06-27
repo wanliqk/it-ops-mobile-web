@@ -14,8 +14,8 @@
           <span class="info-value">{{ ticket.title }}</span>
         </div>
         <div class="info-row">
-          <span class="info-label">故障类型</span>
-          <span class="info-value">{{ faultTypeMap[ticket.fault_type as FaultType] ?? ticket.fault_type }}</span>
+          <span class="info-label">工单分类</span>
+          <span class="info-value">{{ categoryLabel(ticket.category_id) }}</span>
         </div>
         <div class="info-row">
           <span class="info-label">紧急程度</span>
@@ -118,10 +118,11 @@
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { cancelTicket, getTicketDetail } from '@/api/mobile/ticket'
-import type { FaultType, Ticket } from '@/types'
-import { faultTypeMap, ticketRecordActionMap } from '@/types'
+import type { Ticket } from '@/types'
+import { ticketRecordActionMap } from '@/types'
 import { formatTime } from '@/utils/timeline'
 import { showToast } from '@/composables/useToast'
+import { useTicketCategories } from '@/composables/useTicketCategories'
 import StatusTag from '@/components/StatusTag.vue'
 import PriorityTag from '@/components/PriorityTag.vue'
 
@@ -131,6 +132,7 @@ const loading = ref(true)
 const actionLoading = ref(false)
 const showCancelSheet = ref(false)
 const cancelReason = ref('')
+const { ensureLoaded, categoryLabel } = useTicketCategories()
 
 async function load() {
   loading.value = true
@@ -143,7 +145,10 @@ async function load() {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  ensureLoaded()
+})
 
 async function handleCancel() {
   if (!ticket.value) return

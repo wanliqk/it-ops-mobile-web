@@ -9,7 +9,7 @@ import type {
   TicketListQuery
 } from '@/types'
 
-/** 故障类型 / 紧急程度 选项 */
+/** 工单分类 / 紧急程度 选项 */
 export function getFormOptions(): Promise<TicketFormOptions> {
   return request({ url: '/api/mobile/tickets/form-options', method: 'get' })
 }
