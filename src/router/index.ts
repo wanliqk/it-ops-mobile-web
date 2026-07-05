@@ -15,6 +15,8 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', redirect: '/mobile/home' },
+    { path: '/mobile', redirect: '/mobile/home' },
+    { path: '/mobile/', redirect: '/mobile/home' },
     {
       path: '/mobile/login',
       name: 'login',
@@ -50,7 +52,8 @@ const router = createRouter({
       name: 'faq',
       component: () => import('@/views/Faq.vue'),
       meta: { title: '常见问题', showBack: false, showTabBar: true }
-    }
+    },
+    { path: '/:pathMatch(.*)*', redirect: '/mobile/home' }
   ]
 })
 
