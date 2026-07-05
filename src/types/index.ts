@@ -162,6 +162,23 @@ export interface TicketCreateForm {
   category_id: number | string
   priority: string
   asset_id?: number | string | null
+  /** 已上传成功的文件 ID 列表，不传或传空数组表示无附件 */
+  attachment_file_ids?: (number | string)[]
+}
+
+// ============ 移动端文件（上传结果 / 附件查询，字段见 mobile-api.md） ============
+export interface MobileFileItem {
+  id: number | string
+  original_name: string
+  file_ext?: string
+  mime_type?: string
+  file_size?: number
+  /** 相对路径，需结合 baseURL 使用；预览需携带 Authorization 头，不能直接当 <img src> 用 */
+  access_url?: string
+  business_type?: string | null
+  business_id?: number | string | null
+  status?: number
+  created_at?: string
 }
 
 // ============ 分页 ============

@@ -58,25 +58,35 @@
       <div class="form-item">
         <label>故障截图</label>
         <div class="image-list">
-          <div v-for="(img, idx) in images" :key="idx" class="image-item">
-            <img :src="img" alt="故障截图" />
-            <button type="button" class="image-remove" @click="removeImage(idx)">
+          <div v-for="img in images" :key="img.localId" class="image-item">
+            <img :src="img.previewUrl" alt="故障截图" />
+            <div v-if="img.status === 'uploading'" class="image-mask">上传中...</div>
+            <div v-else-if="img.status === 'error'" class="image-mask image-mask-error" @click="retryUpload(img)">
+              上传失败<br />点击重试
+            </div>
+            <button type="button" class="image-remove" @click="removeImage(img)">
               <Icon name="close" />
             </button>
           </div>
-          <label v-if="images.length < 6" class="image-upload">
+          <label v-if="images.length < MAX_IMAGES" class="image-upload">
             <Icon name="camera" />
             <span>上传图片</span>
-            <input type="file" accept="image/*" multiple class="file-input" @change="onFileChange" />
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              multiple
+              class="file-input"
+              @change="onFileChange"
+            />
           </label>
         </div>
-        <p class="hint-text">最多上传6张图片，用于帮助IT人员快速定位问题（占位实现，暂未接入图片上传接口）</p>
+        <p class="hint-text">最多上传{{ MAX_IMAGES }}张图片，单张不超过5MB，支持jpg/png/gif/webp</p>
       </div>
     </form>
 
     <div class="submit-bar">
-      <button class="submit-btn" :disabled="submitting" @click="handleSubmit">
-        {{ submitting ? '提交中...' : '提交报修' }}
+      <button class="submit-btn" :disabled="submitDisabled" @click="handleSubmit">
+        {{ submitLabel }}
       </button>
     </div>
 
@@ -104,10 +114,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getAssetOptions } from '@/api/mobile/asset'
 import { createTicket, getFormOptions } from '@/api/mobile/ticket'
+import { uploadFile } from '@/api/mobile/file'
 import type { AssetOption, TicketCreateForm, TicketFormOptions } from '@/types'
 import { showToast } from '@/composables/useToast'
 import Icon from '@/components/Icon.vue'
@@ -126,8 +137,29 @@ const formOptions = reactive<TicketFormOptions>({ categories: [], priorities: []
 const errors = reactive<Partial<Record<keyof TicketCreateForm, string>>>({})
 const submitting = ref(false)
 
-// 故障截图仅为占位实现，后端暂未提供图片上传接口，不随表单提交
-const images = ref<string[]>([])
+interface UploadImage {
+  localId: string
+  previewUrl: string
+  file: File
+  status: 'uploading' | 'success' | 'error'
+  fileId?: number | string
+}
+
+const MAX_IMAGES = 6
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+
+const images = ref<UploadImage[]>([])
+const hasUploadingImage = computed(() => images.value.some(img => img.status === 'uploading'))
+const hasFailedImage = computed(() => images.value.some(img => img.status === 'error'))
+
+const submitDisabled = computed(() => submitting.value || hasUploadingImage.value || hasFailedImage.value)
+const submitLabel = computed(() => {
+  if (submitting.value) return '提交中...'
+  if (hasUploadingImage.value) return '图片上传中...'
+  if (hasFailedImage.value) return '请处理失败图片'
+  return '提交报修'
+})
 
 const showAssetPicker = ref(false)
 const assetKeyword = ref('')
@@ -163,24 +195,55 @@ function validate(): boolean {
 
 async function handleSubmit() {
   if (!validate()) return
+  if (hasUploadingImage.value) {
+    showToast('图片上传中，请稍候')
+    return
+  }
+  if (hasFailedImage.value) {
+    showToast('存在上传失败的图片，请删除或重试后再提交')
+    return
+  }
+
   submitting.value = true
   try {
+    const fileIds = images.value.map(img => img.fileId).filter((id): id is number | string => id !== undefined)
     const ticket = await createTicket({
       title: form.title.trim(),
       description: form.description.trim(),
       category_id: form.category_id,
       priority: form.priority,
-      asset_id: form.asset_id || undefined
+      asset_id: form.asset_id || undefined,
+      attachment_file_ids: fileIds.length ? fileIds : undefined
     })
+    clearImages()
     showToast('报修提交成功')
     setTimeout(() => {
       router.replace(`/mobile/repair/detail/${ticket.id}`)
     }, 900)
-  } catch {
-    // 错误提示已由 request 拦截器统一展示
+  } catch (err) {
+    const message = err instanceof Error ? err.message : ''
+    if (message.includes('工单创建成功')) {
+      // 工单实际已创建成功，仅附件绑定失败（详情见 mobile-api.md），提示已由 request 拦截器展示；
+      // 这里拿不到工单 id，且不能引导用户重复提交，故清空表单后跳转到报修列表页
+      clearImages()
+      resetForm()
+      setTimeout(() => {
+        router.replace('/mobile/repair/list')
+      }, 1500)
+    }
+    // 其余失败场景保留表单与已上传图片，方便用户重新提交，提示已由 request 拦截器统一展示
   } finally {
     submitting.value = false
   }
+}
+
+function resetForm() {
+  form.title = ''
+  form.description = ''
+  form.category_id = ''
+  form.priority = ''
+  form.asset_id = null
+  selectedAsset.value = null
 }
 
 function openAssetPicker() {
@@ -220,25 +283,77 @@ function clearAsset() {
 function onFileChange(e: Event) {
   const input = e.target as HTMLInputElement
   const files = input.files
-  if (!files) return
-  const remain = 6 - images.value.length
+  if (!files || files.length === 0) return
+
+  const remain = MAX_IMAGES - images.value.length
+  if (remain <= 0) {
+    showToast(`最多上传${MAX_IMAGES}张图片`)
+    input.value = ''
+    return
+  }
+
   Array.from(files)
     .slice(0, remain)
     .forEach(file => {
-      const reader = new FileReader()
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          images.value.push(reader.result)
-        }
+      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        showToast('只能上传 jpg、png、gif、webp 图片')
+        return
       }
-      reader.readAsDataURL(file)
+      if (file.size > MAX_IMAGE_SIZE) {
+        showToast('单张图片不能超过5MB')
+        return
+      }
+      addImage(file)
     })
+
+  // 重置 input value，允许重复选择同一文件
   input.value = ''
 }
 
-function removeImage(idx: number) {
+function addImage(file: File) {
+  // 用 reactive() 包一层，确保 startUpload 里对 status/fileId 的修改是通过响应式代理写入的，
+  // 否则直接修改这个原始对象的属性不会触发视图更新，图片会一直卡在"上传中"
+  const image = reactive<UploadImage>({
+    localId: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    previewUrl: URL.createObjectURL(file),
+    file,
+    status: 'uploading'
+  })
+  images.value.push(image)
+  startUpload(image)
+}
+
+async function startUpload(image: UploadImage) {
+  image.status = 'uploading'
+  try {
+    const result = await uploadFile(image.file)
+    image.status = 'success'
+    image.fileId = result.id
+  } catch {
+    // 上传失败提示已由 request 拦截器统一展示，这里只标记状态以便用户重试或删除
+    image.status = 'error'
+  }
+}
+
+function retryUpload(image: UploadImage) {
+  startUpload(image)
+}
+
+function removeImage(image: UploadImage) {
+  const idx = images.value.indexOf(image)
+  if (idx === -1) return
+  URL.revokeObjectURL(image.previewUrl)
   images.value.splice(idx, 1)
 }
+
+function clearImages() {
+  images.value.forEach(img => URL.revokeObjectURL(img.previewUrl))
+  images.value = []
+}
+
+onUnmounted(() => {
+  images.value.forEach(img => URL.revokeObjectURL(img.previewUrl))
+})
 </script>
 
 <style scoped>
@@ -380,6 +495,24 @@ function removeImage(idx: number) {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.image-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.image-mask-error {
+  background: rgba(245, 108, 108, 0.75);
+  cursor: pointer;
 }
 
 .image-remove {

@@ -69,6 +69,21 @@
         </div>
       </section>
 
+      <section class="page-section" v-if="attachments.length > 0">
+        <div class="section-title">故障图片</div>
+        <div class="attachment-list">
+          <div v-for="file in attachments" :key="file.id" class="attachment-item">
+            <img
+              v-if="attachmentPreviews[file.id]"
+              :src="attachmentPreviews[file.id]"
+              alt="故障图片"
+              @click="previewImage = attachmentPreviews[file.id]"
+            />
+            <div v-else class="attachment-file">{{ file.original_name }}</div>
+          </div>
+        </div>
+      </section>
+
       <section class="page-section">
         <div class="section-title">工单流转记录</div>
         <div v-if="!ticket.records || ticket.records.length === 0" class="empty-tip">暂无流转记录</div>
@@ -98,6 +113,11 @@
       </div>
     </template>
 
+    <!-- 图片预览 弹层 -->
+    <div v-if="previewImage" class="preview-overlay" @click="previewImage = null">
+      <img :src="previewImage" alt="故障图片预览" />
+    </div>
+
     <!-- 取消报修 弹层 -->
     <div v-if="showCancelSheet" class="cancel-overlay" @click.self="showCancelSheet = false">
       <div class="cancel-sheet">
@@ -115,10 +135,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { cancelTicket, getTicketDetail } from '@/api/mobile/ticket'
-import type { Ticket } from '@/types'
+import { getFilePreviewBlobUrl, getFilesByBusiness } from '@/api/mobile/file'
+import type { MobileFileItem, Ticket } from '@/types'
 import { ticketRecordActionMap } from '@/types'
 import { formatTime } from '@/utils/timeline'
 import { showToast } from '@/composables/useToast'
@@ -134,6 +155,10 @@ const showCancelSheet = ref(false)
 const cancelReason = ref('')
 const { ensureLoaded, categoryLabel } = useTicketCategories()
 
+const attachments = ref<MobileFileItem[]>([])
+const attachmentPreviews = ref<Record<string, string>>({})
+const previewImage = ref<string | null>(null)
+
 async function load() {
   loading.value = true
   try {
@@ -145,9 +170,31 @@ async function load() {
   }
 }
 
+async function loadAttachments() {
+  try {
+    attachments.value = await getFilesByBusiness('ticket_attachment', route.params.id as string)
+    await Promise.all(
+      attachments.value.map(async file => {
+        try {
+          attachmentPreviews.value[file.id] = await getFilePreviewBlobUrl(file.id)
+        } catch {
+          // 单张图片预览失败时不影响其他图片，保留文件名占位
+        }
+      })
+    )
+  } catch {
+    attachments.value = []
+  }
+}
+
 onMounted(() => {
   load()
   ensureLoaded()
+  loadAttachments()
+})
+
+onUnmounted(() => {
+  Object.values(attachmentPreviews.value).forEach(url => URL.revokeObjectURL(url))
 })
 
 async function handleCancel() {
@@ -223,6 +270,57 @@ async function handleCancel() {
   line-height: 1.6;
   color: var(--color-text);
   white-space: pre-wrap;
+}
+
+.attachment-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.attachment-item {
+  width: 72px;
+  height: 72px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+.attachment-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.attachment-file {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--color-text-secondary);
+  word-break: break-all;
+}
+
+.preview-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+}
+
+.preview-overlay img {
+  max-width: 92%;
+  max-height: 80%;
+  object-fit: contain;
 }
 
 .timeline {
